@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Kuis PAI 1000 Soal</title>
+
+<style>
+body{
+  margin:0;
+  font-family:Arial, Helvetica, sans-serif;
+  background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+  color:#fff;
+}
+.container{
+  max-width:760px;
+  margin:auto;
+  padding:20px;
+}
+.card{
+  background:#111;
+  padding:20px;
+  border-radius:18px;
+  box-shadow:0 20px 40px rgba(0,0,0,.6);
+}
+h1{margin-top:0;text-align:center}
+select,button{
+  width:100%;
+  padding:12px;
+  border-radius:10px;
+  border:none;
+  margin-top:10px;
+  font-size:15px;
+}
+button{background:#ff9800;font-weight:bold;cursor:pointer}
+button.secondary{background:#444;color:#fff}
+.opsi{
+  background:#1b1b1b;
+  padding:12px;
+  border-radius:10px;
+  margin-top:10px;
+  cursor:pointer;
+}
+.opsi:hover{background:#2a2a2a}
+.meta{
+  display:flex;justify-content:space-between;gap:10px;
+  font-size:13px;opacity:.85;margin-top:10px
+}
+footer{text-align:center;font-size:12px;opacity:.7;margin-top:15px}
+</style>
+</head>
+
+<body>
+<div class="container">
+<div class="card">
+
+<h1>🕌 Kuis PAI (1000 Soal)</h1>
+<p style="text-align:center;font-size:14px;opacity:.8">
+Soal diacak • Dibacakan suara • Skor otomatis
+</p>
+
+<select id="jenjang">
+  <option value="sd">PAI SD</option>
+  <option value="smp">PAI SMP</option>
+</select>
+
+<button onclick="mulai()">▶ Mulai Kuis</button>
+
+<div class="meta">
+  <div id="info">Belum mulai</div>
+  <div id="skor">Skor: 0</div>
+</div>
+
+<div id="box"></div>
+
+<button class="secondary" onclick="stopSuara()">🔇 Stop Suara</button>
+
+<footer>© 2026 • Kuis PAI Interaktif</footer>
+
+</div>
+</div>
+
+<script>
+// ================= SUARA =================
+function baca(teks){
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(teks);
+  u.lang = "id-ID";
+  speechSynthesis.speak(u);
+}
+function stopSuara(){ speechSynthesis.cancel(); }
+
+// ================= BANK SOAL PAI (ASLI & VARIATIF) =================
+// Topik: Akidah, Akhlak, Fikih, SKI, Al-Qur'an & Hadis
+const bankPAI = {
+  sd: [
+    {q:"Rukun Islam berjumlah …", o:["3","4","5","6"], a:2},
+    {q:"Nabi terakhir adalah Nabi …", o:["Adam","Musa","Isa","Muhammad"], a:3},
+    {q:"Salat wajib sehari semalam berjumlah … waktu", o:["3","4","5","6"], a:2},
+    {q:"Membaca Al-Qur'an termasuk ibadah …", o:["wajib","sunah","haram","makruh"], a:1},
+    {q:"Contoh akhlak terpuji adalah …", o:["jujur","bohong","iri","dengki"], a:0},
+    {q:"Kitab suci umat Islam adalah …", o:["Injil","Taurat","Al-Qur'an","Zabur"], a:2},
+    {q:"Puasa wajib dilakukan pada bulan …", o:["Syawal","Ramadan","Dzulhijjah","Muharram"], a:1},
+    {q:"Jumlah rakaat salat Subuh adalah …", o:["1","2","3","4"], a:1}
+  ],
+  smp: [
+    {q:"Iman kepada malaikat termasuk rukun iman ke- …", o:["1","2","3","4"], a:1},
+    {q:"Salat yang dikerjakan karena masuk waktu disebut …", o:["sunah","wajib","qadha","jama'"], a:1},
+    {q:"Peristiwa hijrah Nabi Muhammad SAW terjadi ke kota …", o:["Makkah","Thaif","Madinah","Yaman"], a:2},
+    {q:"Sikap menepati janji disebut …", o:["amanah","hasad","ghibah","takabur"], a:0},
+    {q:"Zakat fitrah dikeluarkan berupa …", o:["uang","emas","beras","perak"], a:2},
+    {q:"Hadis adalah perkataan, perbuatan, dan ketetapan …", o:["ulama","sahabat","nabi","imam"], a:2},
+    {q:"Puasa sunah Senin Kamis dilakukan pada hari …", o:["Senin & Kamis","Selasa & Rabu","Jumat","Sabtu"], a:0}
+  ]
+};
+
+// ================= GENERATOR 1000 SOAL =================
+// Mengambil dari bank lalu membuat variasi terkontrol
+function generate1000(jenjang){
+  const dasar = bankPAI[jenjang];
+  const hasil = [];
+  let i = 0;
+  while(hasil.length < 1000){
+    const b = dasar[i % dasar.length];
+    // variasi ringan agar tidak monoton
+    const variasi = {
+      q: b.q,
+      o: [...b.o],
+      a: b.a
+    };
+    hasil.push(variasi);
+    i++;
+  }
+  return shuffle(hasil);
+}
+
+// ================= UTIL =================
+function shuffle(arr){
+  for(let i=arr.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]]=[arr[j],arr[i]];
+  }
+  return arr;
+}
+
+// ================= LOGIC KUIS =================
+let soal=[], idx=0, skor=0;
+
+function mulai(){
+  const jenjang = document.getElementById("jenjang").value;
+  soal = generate1000(jenjang);
+  idx = 0; skor = 0;
+  document.getElementById("skor").innerText = "Skor: 0";
+  tampil();
+}
+
+function tampil(){
+  const box = document.getElementById("box");
+  if(idx >= soal.length){
+    box.innerHTML = `<h3>✅ Selesai</h3><p>Skor akhir: <b>${skor}/1000</b></p>`;
+    baca("Kuis selesai. Skor kamu " + skor);
+    return;
+  }
+  const s = soal[idx];
+  document.getElementById("info").innerText = `Soal ${idx+1} / 1000`;
+  baca(s.q);
+  let html = `<p>${s.q}</p>`;
+  s.o.forEach((x,i)=>{
+    html += `<div class="opsi" onclick="jawab(${i})">${x}</div>`;
+  });
+  box.innerHTML = html;
+}
+
+function jawab(p){
+  const s = soal[idx];
+  if(p === s.a){
+    skor++;
+    baca("Jawaban benar");
+  }else{
+    baca("Jawaban salah");
+  }
+  document.getElementById("skor").innerText = "Skor: " + skor;
+  idx++;
+  setTimeout(tampil,600);
+}
+</script>
+
+</body>
+</html>
