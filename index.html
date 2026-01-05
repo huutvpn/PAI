@@ -2,222 +2,175 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
+<title>Kuis PAI + Suara + Timer</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CBT PAI 1000 Soal</title>
-
 <style>
 body{
-  margin:0;
-  font-family:Arial, Helvetica, sans-serif;
-  background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
-  color:#fff;
+    font-family: Arial, sans-serif;
+    background:#f4f6f8;
+    padding:20px;
 }
 .container{
-  max-width:760px;
-  margin:auto;
-  padding:20px;
+    max-width:700px;
+    background:#fff;
+    padding:20px;
+    border-radius:10px;
+    box-shadow:0 4px 10px rgba(0,0,0,.1);
 }
-.card{
-  background:#111;
-  padding:20px;
-  border-radius:18px;
-  box-shadow:0 20px 40px rgba(0,0,0,.6);
-}
-h1{text-align:center;margin-top:0}
-button{
-  width:100%;
-  padding:12px;
-  border-radius:10px;
-  border:none;
-  margin-top:10px;
-  font-size:15px;
-  background:#ff9800;
-  font-weight:bold;
-  cursor:pointer;
-}
-.opsi{
-  background:#1b1b1b;
-  padding:12px;
-  border-radius:10px;
-  margin-top:10px;
-  cursor:pointer;
-}
-.opsi:hover{background:#2a2a2a}
-.meta{
-  display:flex;
-  justify-content:space-between;
-  font-size:14px;
-  margin-top:10px;
-}
+h1{text-align:center}
 .timer{
-  font-weight:bold;
-  color:#00e676;
+    font-size:18px;
+    font-weight:bold;
+    color:red;
+    text-align:center;
+    margin-bottom:15px;
 }
-.timer.danger{
-  color:#ff5252;
+.question{
+    font-size:18px;
+    margin-bottom:15px;
 }
-footer{
-  text-align:center;
-  font-size:12px;
-  opacity:.7;
-  margin-top:15px;
+.options label{
+    display:block;
+    margin:8px 0;
+    cursor:pointer;
 }
+button{
+    padding:10px 15px;
+    margin-top:15px;
+    border:none;
+    border-radius:6px;
+    background:#007bff;
+    color:#fff;
+    font-size:16px;
+    cursor:pointer;
+}
+button:hover{background:#0056b3}
+.hidden{display:none}
 </style>
 </head>
-
 <body>
+
 <div class="container">
-<div class="card">
+<h1>Kuis PAI</h1>
+<div class="timer" id="timer">Sisa Waktu: 05:00</div>
 
-<h1>🕌 CBT PAI (1000 Soal)</h1>
-<p style="text-align:center;font-size:14px;opacity:.8">
-Timer aktif • Soal acak • Tidak ada soal ulang
-</p>
-
-<button onclick="mulai()">▶ Mulai Ujian</button>
-
-<div class="meta">
-  <div id="info">Belum mulai</div>
-  <div id="timer" class="timer">⏱ 60:00</div>
-  <div id="skor">Skor: 0</div>
+<div id="quiz">
+    <div class="question" id="question"></div>
+    <div class="options" id="options"></div>
+    <button onclick="nextQuestion()">Selanjutnya</button>
 </div>
 
-<div id="box"></div>
-
-<button onclick="stopSuara()">🔇 Stop Suara</button>
-
-<footer>© 2026 • CBT PAI Online</footer>
-
-</div>
+<div id="result" class="hidden"></div>
 </div>
 
 <script>
-// ===================== SUARA =====================
-function baca(teks){
-  speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(teks);
-  u.lang = "id-ID";
-  speechSynthesis.speak(u);
+// ===== DATA SOAL =====
+let questions = [
+{
+    q: "Balig menurut Islam adalah...",
+    options: [
+        "Sudah menikah",
+        "Sudah mampu bekerja",
+        "Sudah mencapai batas kewajiban syariat",
+        "Sudah dewasa secara ekonomi"
+    ],
+    answer: 2
+},
+{
+    q: "Salah satu tanda balig bagi laki-laki adalah...",
+    options: [
+        "Menstruasi",
+        "Mimpi basah",
+        "Hamil",
+        "Menikah"
+    ],
+    answer: 1
+},
+{
+    q: "Kewajiban utama setelah balig adalah...",
+    options: [
+        "Bekerja",
+        "Belajar",
+        "Melaksanakan ibadah wajib",
+        "Menikah"
+    ],
+    answer: 2
 }
-function stopSuara(){ speechSynthesis.cancel(); }
+];
 
-// ===================== BANK SOAL UNIK =====================
-function buat1000Soal(){
-  const topik = [
-    {q:"Rukun Islam berjumlah", o:["3","4","5","6"], a:2},
-    {q:"Salat Magrib terdiri dari", o:["2","3","4","5"], a:1},
-    {q:"Sikap jujur termasuk akhlak", o:["tercela","terpuji","buruk","dilarang"], a:1},
-    {q:"Hijrah Nabi Muhammad SAW ke kota", o:["Makkah","Thaif","Madinah","Yaman"], a:2},
-    {q:"Kitab suci umat Islam adalah", o:["Injil","Zabur","Taurat","Al-Qur'an"], a:3}
-  ];
+// ===== ACAK SOAL =====
+questions.sort(() => Math.random() - 0.5);
 
-  const soal=[];
-  let id=1;
-  while(soal.length<1000){
-    for(const t of topik){
-      if(soal.length>=1000) break;
-      soal.push({
-        id:id++,
-        q:t.q,
-        o:[...t.o],
-        a:t.a
-      });
+let index = 0;
+let score = 0;
+
+// ===== TEXT TO SPEECH =====
+function speak(text){
+    let msg = new SpeechSynthesisUtterance(text);
+    msg.lang = "id-ID";
+    speechSynthesis.speak(msg);
+}
+
+// ===== TAMPILKAN SOAL =====
+function showQuestion(){
+    let q = questions[index];
+    document.getElementById("question").innerText = (index+1)+". "+q.q;
+    speak(q.q);
+
+    let optionsHTML = "";
+    q.options.forEach((opt,i)=>{
+        optionsHTML += `
+        <label>
+            <input type="radio" name="opt" value="${i}">
+            ${opt}
+        </label>`;
+    });
+    document.getElementById("options").innerHTML = optionsHTML;
+}
+showQuestion();
+
+// ===== NEXT =====
+function nextQuestion(){
+    let selected = document.querySelector('input[name="opt"]:checked');
+    if(!selected){
+        alert("Pilih jawaban dulu!");
+        return;
     }
-  }
-  return shuffle(soal);
-}
-
-function shuffle(arr){
-  for(let i=arr.length-1;i>0;i--){
-    const j=Math.floor(Math.random()*(i+1));
-    [arr[i],arr[j]]=[arr[j],arr[i]];
-  }
-  return arr;
-}
-
-// ===================== CBT TIMER =====================
-let waktu = 60 * 60; // ⏱ 60 menit (UBAH DI SINI)
-let timerInterval;
-
-function startTimer(){
-  updateTimer();
-  timerInterval = setInterval(()=>{
-    waktu--;
-    updateTimer();
-    if(waktu <= 0){
-      clearInterval(timerInterval);
-      selesaiWaktu();
+    if(parseInt(selected.value) === questions[index].answer){
+        score++;
     }
-  },1000);
+    index++;
+    if(index < questions.length){
+        showQuestion();
+    }else{
+        finishQuiz();
+    }
 }
 
-function updateTimer(){
-  const m = Math.floor(waktu/60);
-  const s = waktu % 60;
-  const t = document.getElementById("timer");
-  t.innerText = `⏱ ${m}:${s.toString().padStart(2,"0")}`;
-  if(waktu <= 300){ t.classList.add("danger"); } // 5 menit terakhir
-}
-
-function selesaiWaktu(){
-  document.getElementById("box").innerHTML = `
-    <h3>⏰ Waktu Habis</h3>
-    <p>Skor akhir kamu: <b>${skor}/1000</b></p>
-  `;
-  baca("Waktu ujian telah habis");
-}
-
-// ===================== LOGIC CBT =====================
-let soal=[], idx=0, skor=0;
-
-function mulai(){
-  soal = buat1000Soal(); // dibuat & diacak SEKALI
-  idx = 0;
-  skor = 0;
-  waktu = 60 * 60; // reset waktu
-  clearInterval(timerInterval);
-  startTimer();
-  document.getElementById("skor").innerText = "Skor: 0";
-  tampil();
-}
-
-function tampil(){
-  if(waktu <= 0) return;
-
-  const box = document.getElementById("box");
-  if(idx >= soal.length){
-    clearInterval(timerInterval);
-    box.innerHTML = `
-      <h3>✅ Ujian Selesai</h3>
-      <p>Skor akhir: <b>${skor}/1000</b></p>
+// ===== HASIL =====
+function finishQuiz(){
+    document.getElementById("quiz").classList.add("hidden");
+    document.getElementById("result").classList.remove("hidden");
+    document.getElementById("result").innerHTML = `
+        <h2>Hasil Akhir</h2>
+        <p>Skor kamu: <b>${score} / ${questions.length}</b></p>
     `;
-    baca("Ujian selesai");
-    return;
-  }
-
-  const s = soal[idx];
-  document.getElementById("info").innerText = `Soal ${idx+1} / 1000`;
-  baca(s.q);
-
-  let html = `<p>${s.q}</p>`;
-  s.o.forEach((x,i)=>{
-    html += `<div class="opsi" onclick="jawab(${i})">${x}</div>`;
-  });
-  box.innerHTML = html;
+    speak("Kuis selesai. Nilai kamu "+score);
 }
 
-function jawab(p){
-  if(waktu <= 0) return;
-  if(p === soal[idx].a){
-    skor++;
-    baca("Jawaban benar");
-  }else{
-    baca("Jawaban salah");
-  }
-  document.getElementById("skor").innerText = "Skor: " + skor;
-  idx++;
-  setTimeout(tampil,500);
-}
+// ===== TIMER CBT =====
+let time = 300; // 5 menit
+let timer = setInterval(()=>{
+    let m = Math.floor(time/60);
+    let s = time%60;
+    document.getElementById("timer").innerText =
+        `Sisa Waktu: ${m}:${s<10?'0':''}${s}`;
+    time--;
+    if(time < 0){
+        clearInterval(timer);
+        finishQuiz();
+    }
+},1000);
 </script>
 
 </body>
